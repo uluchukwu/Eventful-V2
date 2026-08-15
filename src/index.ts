@@ -2,12 +2,14 @@ import express from "express";
 import prisma from "./prisma";
 import authRoutes from "./routes/auth";
 import { authenticate } from "./middleware/auth";
+import eventRoutes from "./routes/events";
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+app.use("/events", eventRoutes);
 
 app.get("/", (req, res) => {
   res.send("Eventful is alive");
