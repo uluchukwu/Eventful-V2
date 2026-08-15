@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "./prisma";
 import authRoutes from "./routes/auth";
+import { authenticate } from "./middleware/auth";
 
 const app = express();
 const PORT = 3000;
@@ -12,8 +13,10 @@ app.get("/", (req, res) => {
   res.send("Eventful is alive");
 });
 
-app.get("/users", async (req, res) => {
-  const users = await prisma.user.findMany();
+app.get("/users", authenticate, async (req, res) => {
+  const users = await prisma.user.findMany({
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+  });
   res.json(users);
 });
 
