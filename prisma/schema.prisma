@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // "CREATOR" or "EVENTEE"
+  createdAt DateTime @default(now())
+
+  eventsCreated Event[]        @relation("EventCreator")
+  tickets       Ticket[]
+  notifications Notification[]
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  location    String
+  date        DateTime
+  price       Decimal
+  totalTickets Int
+  createdAt   DateTime @default(now())
+
+  creatorId String
+  creator   User   @relation("EventCreator", fields: [creatorId], references: [id])
+
+  tickets       Ticket[]
+  notifications Notification[]
+}
+model Ticket {
+  id           String   @id @default(uuid())
+  status       String   @default("PENDING") // "PENDING" | "CONFIRMED" | "CANCELLED"
+  qrCodeData   String?  @unique
+  purchasedAt  DateTime @default(now())
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+
+  payment Payment?
+}
+model Payment {
+  id            String   @id @default(uuid())
+  amount        Decimal
+  status        String   @default("PENDING") // "PENDING" | "SUCCESS" | "FAILED"
+  paystackRef   String   @unique
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  ticketId String  @unique
+  ticket   Ticket  @relation(fields: [ticketId], references: [id])
+}
+model Notification {
+  id          String   @id @default(uuid())
+  remindAt    DateTime
+  sent        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
+}

@@ -1,12 +1,18 @@
 import express from "express";
+import prisma from "./prisma";
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
 app.get("/", (req, res) => {
-  res.send("entful is live!");
+  res.send("Eventful is alive");
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.get("/users", async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
