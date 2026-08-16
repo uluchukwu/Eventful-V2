@@ -3,11 +3,13 @@ import prisma from "./prisma";
 import authRoutes from "./routes/auth";
 import { authenticate } from "./middleware/auth";
 import eventRoutes from "./routes/events";
+import paymentRoutes from "./routes/payment";
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/events", eventRoutes);
 
