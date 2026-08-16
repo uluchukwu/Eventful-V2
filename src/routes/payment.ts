@@ -1,6 +1,8 @@
 import { Router } from "express";
 import prisma from "../prisma";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireRole } from "../middleware/auth";
+import QRCode from "qrcode";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -57,6 +59,8 @@ router.post("/:ticketId/initialize", authenticate, async (req, res) => {
 
   res.json({ authorizationUrl: data.data.authorization_url, reference: data.data.reference });
 });
+
+// Verify payment and issue QR code
 router.get("/verify/:reference", authenticate, async (req, res) => {
   const reference = req.params.reference as string;
 
@@ -77,6 +81,9 @@ router.get("/verify/:reference", authenticate, async (req, res) => {
   const payment = await prisma.payment.findUnique({ where: { paystackRef: reference } });
   if (!payment) return res.status(404).json({ error: "Payment record not found" });
 
+  const qrToken = crypto.randomBytes(16).toString("hex");
+  const qrCodeImage = await QRCode.toDataURL(qrToken);
+
   await prisma.$transaction([
     prisma.payment.update({
       where: { paystackRef: reference },
@@ -84,10 +91,30 @@ router.get("/verify/:reference", authenticate, async (req, res) => {
     }),
     prisma.ticket.update({
       where: { id: payment.ticketId },
-      data: { status: "CONFIRMED" },
+      data: { status: "CONFIRMED", qrCodeData: qrToken },
     }),
   ]);
 
-  res.json({ message: "Payment verified successfully" });
+  res.json({ message: "Payment verified successfully", qrCode: qrCodeImage });
 });
+
+// Scan a ticket's QR code at the event door — creators only
+router.post("/scan/:qrToken", authenticate, requireRole("CREATOR"), async (req, res) => {
+  const qrToken = req.params.qrToken as string;
+
+  const ticket = await prisma.ticket.findUnique({ where: { qrCodeData: qrToken } });
+
+  if (!ticket) return res.status(404).json({ error: "Invalid QR code" });
+  if (ticket.status !== "CONFIRMED") {
+    return res.status(400).json({ error: "Ticket not valid for entry" });
+  }
+
+  await prisma.ticket.update({
+    where: { id: ticket.id },
+    data: { status: "SCANNED" },
+  });
+
+  res.json({ message: "Ticket valid — entry granted" });
+});
+
 export default router;
