@@ -5,6 +5,14 @@ import prisma from "../prisma";
 
 const router = Router();
 
+const JWT_SECRET: string = (() => {
+  const value = process.env.JWT_SECRET;
+  if (!value) {
+    throw new Error("JWT_SECRET is not set in environment variables");
+  }
+  return value;
+})();
+
 router.post("/register", async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -37,7 +45,7 @@ router.post("/login", async (req, res) => {
 
   const token = jwt.sign(
     { userId: user.id, role: user.role },
-    process.env.JWT_SECRET as string,
+    JWT_SECRET,
     { expiresIn: "7d" }
   );
 
