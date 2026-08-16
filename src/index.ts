@@ -4,11 +4,19 @@ import authRoutes from "./routes/auth";
 import { authenticate } from "./middleware/auth";
 import eventRoutes from "./routes/events";
 import paymentRoutes from "./routes/payment";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 const PORT = 3000;
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per window
+  message: { error: "Too many requests, please try again later" },
+});
+
 
 app.use(express.json());
+app.use(limiter);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/events", eventRoutes);

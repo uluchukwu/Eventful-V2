@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
 import prisma from "../prisma";
 
 const router = Router();
@@ -13,7 +14,13 @@ const JWT_SECRET: string = (() => {
   return value;
 })();
 
-router.post("/register", async (req, res) => {
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many attempts, please try again later" },
+});
+
+router.post("/register", authLimiter, async (req, res) => {
   const { name, email, password, role } = req.body;
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -30,7 +37,7 @@ router.post("/register", async (req, res) => {
   res.status(201).json({ id: user.id, name: user.name, email: user.email });
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email } });
